@@ -26,7 +26,7 @@ EDouble. Exp16 ::= Double ;
 EString. Exp16 ::= String ;
 ETrue. Exp16 ::= "true" ;
 EFalse. Exp16 ::= "false" ;
-EId. Exp16 ::= Id ;
+EId. Exp15 ::= Id ;
 ECall. Exp15 ::= Id "(" [Exp] ")" ;
 EInd. Exp15 ::= Id "[" Exp "]" ;
 EPIncr. Exp14 ::= Exp15 "++" ;
@@ -48,7 +48,7 @@ EAnd. Exp4 ::= Exp5 "&&" Exp4 ;
 EOr. Exp3 ::= Exp4 "||" Exp3 ;
 EAss. Exp2 ::= Exp3 "=" Exp2 ;
 
-coercions Exp 16 ;
+coercions Exp 17 ;
 separator Exp "," ;
 
 Tbool. Type ::= "bool" ;
@@ -56,11 +56,10 @@ Tdouble. Type ::= "double" ;
 Tint. Type ::= "int" ;
 Tstring. Type ::= "string" ;
 Tvoid. Type ::= "void" ;
-
 separator nonempty Type "," ;
 
-ETempi. Exp15 ::= Id "<"[Type]">" ;
-QC. Exp16 ::= Exp16 "::" Exp15; 
+ETempi. Exp16 ::= "<"Type">" ;
+QC. Exp16 ::= Exp16 "::" Exp16; 
 
 position token Id (letter (letter | digit | '_')*) ;
 separator  nonempty Id "," ;
