@@ -9,7 +9,31 @@ DFun. Def ::= Type Id "(" [Arg] ")" "{" [Stm] "}" ;
 separator Arg "," ;
 terminator Stm "" ;
 
-ADecl. Arg ::= Type Id ;
+
+
+
+ArgDecl. Arg ::= Argument ;
+CArgDecl. Arg ::= "const" Argument ;
+
+ATDecl. Argument	::= Type ;
+ADecl. Argument	::= Type Id ;
+ADeclAss. Argument	::= Type Id "=" Exp ;
+ARDecl. Argument	::= Type "&" ;
+ARIDecl. Argument	::= Type "&" Id ;
+ARDeclAss. Argument	::= Type "&" Id "=" Exp ;
+
+
+Decl. Dec ::= Declaration ";" ;
+CDecl. Dec ::= "const" Declaration ";" ;
+D. Declaration ::= QCList Id ";" ;
+Del. Declaration ::= Type [Id] ;
+DelAss. Declaration ::= Type Id "=" Exp ;
+RefDel. Declaration ::= Type "&" [Id] ;
+RefDelAss. Declaration ::= Type "&" Id "=" Exp ;
+separator Dec "" ;
+
+
+
 
 SExp. Stm ::= Exp ";" ;
 SDecl. Stm ::= Type Id ";" ;
@@ -18,21 +42,22 @@ SInit. Stm ::= Type Id "=" Exp ";" ;
 SReturn. Stm ::= "return" Exp ";" ;
 SReturnVoid. Stm ::= "return" ";" ;
 SWhile. Stm ::= "while" "(" Exp ")" Stm ;
-SDoWhile. Stm ::= "do" Stm ";" "while" "(" Exp ")";
+SDoWhile. Stm ::= "do" Stm "while" "(" Exp ")" ";";
 SBlock. Stm ::= "{" [Stm] "}" ;
 SIf. Stm ::= "if" "(" Exp ")" Stm ;
 SIfElse. Stm ::= "if" "(" Exp ")" Stm "else" Stm ;
-SFor. Stm ::= "for" "(" Exp ";" Exp ";" Exp ")" Stm ;
-STypedef. Stm ::= "typedef" Exp Id ;
+SFor. Stm ::= "for" "(" Type Exp ";" Exp ";" Exp ")" Stm ;
+STypedef. Stm ::= "typedef" QCList Id ";" ;
 SStruct. Stm ::= "struct" Id "{" [Stm] "}" ";" ;
-SVarDef. Stm ::= Exp Id ";" ;
+
 
 EInt. Exp16 ::= Integer ;
 EDouble. Exp16 ::= Double ;
-EString. Exp16 ::= String ;
+EString. Exp16 ::= [String] ;
+EChar. Exp16 ::= Char ;
 ETrue. Exp16 ::= "true" ;
 EFalse. Exp16 ::= "false" ;
---EId. Exp16 ::= Id ;
+EId. Exp16 ::= Id ;
 --ECid. Exp16 ::= [Cid] ;
 ECid. Exp16 ::= QCList ;
 ECall. Exp15 ::= Id "(" [Exp] ")" ;
@@ -67,19 +92,20 @@ EExc. Exp1 ::= "throw" Exp2 ;
 
 coercions Exp 16 ;
 separator Exp "," ;
+separator nonempty String "" ;
 
-rules Type ::= "bool" | "int" | "double" | "void" | "string" ;
+rules Type ::= "bool" | "int" | "double" | "void" | "string"  ;
 separator nonempty Type "," ;
 
 
 QCL. QCList ::= [Qcons];
 QType. Qcons ::= Type ;
-QId. Qcons ::= Id;
-QTempi. Qcons ::= Id "<"Type">" ;
+QId. Qcons ::= Id ;
+QTempi. Qcons ::= Id "<"[Type]">" ;
 separator nonempty Qcons "::" ;
 
-Cid1. Cid ::= Id ;
-separator nonempty Cid "::" ;
+--Cid1. Cid ::= Id ;
+--separator nonempty Cid "::" ;
 
 position token Id (letter (letter | digit | '_')*) ;
 separator  nonempty Id "," ;
