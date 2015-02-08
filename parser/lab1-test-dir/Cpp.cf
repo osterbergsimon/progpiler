@@ -1,0 +1,80 @@
+PDefs. Program ::= [Def] ;
+terminator Def "" ;
+
+comment "#" ;
+comment "//" ;
+comment "/*" "*/" ;
+
+DFun. Def ::= Type Id "(" [Arg] ")" "{" [Stm] "}" ;
+separator Arg "," ;
+terminator Stm "" ;
+
+ADecl. Arg ::= Type Id ;
+
+SExp. Stm ::= Exp ";" ;
+
+SDecl. Stm ::= Type Id ";" ;
+SDecls. Stm ::= Type Id "," [Id] ";" ;
+SInit. Stm ::= Type Id "=" Exp ";" ;
+
+SReturn. Stm ::= "return" Exp ";" ;
+SReturnVoid. Stm ::= "return" ";" ;
+SWhile. Stm ::= "while" "(" Exp ")" Stm ;
+SDoWhile. Stm ::= "do" Stm ";" "while" "(" Exp ")";
+SBlock. Stm ::= "{" [Stm] "}" ;
+SIf. Stm ::= "if" "(" Exp ")" Stm ;
+SIfElse. Stm ::= "if" "(" Exp ")" Stm "else" Stm ;
+SFor. Stm ::= "for" "(" Exp ";" Exp ";" Exp ")" Stm ;
+STypedef. Stm ::= "typedef" Exp Id ;
+SStruct. Stm ::= "struct" Id "{" [Stm] "}" ";" ;
+
+
+EInt. Exp16 ::= Integer ;
+EDouble. Exp16 ::= Double ;
+EString. Exp16 ::= String ;
+ETrue. Exp16 ::= "true" ;
+EFalse. Exp16 ::= "false" ;
+EId. Exp16 ::= Id ;
+ECall. Exp15 ::= Id "(" [Exp] ")" ;
+EInd. Exp15 ::= Id "[" Exp "]" ;
+EPIncr. Exp14 ::= Exp15 "++" ;
+EPDecr. Exp14 ::= Exp15 "--" ;
+EPStr1. Exp14 ::= Exp15 "." Exp14 ;
+EPStr2. Exp14 ::= Exp15 "->" Exp14 ;
+EIncr. Exp13 ::= "++" Exp14 ;
+EDecr. Exp13 ::= "--" Exp14 ;
+ENeg. Exp13 ::= "!" Exp14 ;
+EMul. Exp12 ::= Exp12 "*" Exp13 ;
+EDiv. Exp12 ::= Exp12 "/" Exp13 ;
+ERem. Exp12 ::= Exp12 "%" Exp13 ;
+EAdd. Exp11 ::= Exp11 "+" Exp12 ;
+ESub. Exp11 ::= Exp11 "-" Exp12 ;
+ELef. Exp10 ::= Exp10 "<<" Exp11 ;
+ERig. Exp10 ::= Exp10 ">>" Exp11 ;
+ELt. Exp9 ::= Exp10 "<" Exp10 ;
+EGt. Exp9 ::= Exp10 ">" Exp10 ;
+ELEq. Exp9 ::= Exp10 "<=" Exp10 ;
+EGEq. Exp9 ::= Exp10 ">=" Exp10 ;
+EEq. Exp8 ::= Exp9 "==" Exp9 ;
+ENEq. Exp8 ::= Exp9 "!=" Exp9 ;
+EAnd. Exp4 ::= Exp4 "&&" Exp5 ;
+EOr. Exp3 ::= Exp3 "||" Exp4 ;
+EAss. Exp2 ::= Exp3 "=" Exp2 ;
+EPAss. Exp2 ::= Exp3 "+=" Exp2 ;
+ENAss. Exp2 ::= Exp3 "-=" Exp2 ;
+ECon. Exp2 ::= Exp3 "?" Exp2 ":" Exp2 ;
+EExc. Exp1 ::= "throw" Exp2 ;
+
+coercions Exp 17 ;
+separator Exp "," ;
+
+rules Type ::= "bool" | "int" | "double" | "void" | "string" ;
+
+separator nonempty Type "," ;
+--internal ETyped. Exp15 ::= "(" Exp ":" Type ")" ;
+
+ETempi. Exp16 ::= Id"<"[Type]">" ;
+QC. Exp16 ::= Exp17 "::" Exp17; 
+
+position token Id (letter (letter | digit | '_')*) ;
+separator  nonempty Id "," ;

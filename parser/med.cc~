@@ -1,0 +1,50 @@
+#ifdef _MSC_VER
+#pragma warning(disable:4503)      // `silence compiler complaints about generated names being too long'
+#endif
+
+#include <algorithm>
+#include <cstdlib>
+#include <iostream>
+#include <map>
+#include <stdexcept>
+#include <string>
+#include <vector>
+
+#include "split.h"
+#include <time.h>
+
+using std::istream;           using std::cin;
+using std::copy;              using std::cout;
+using std::endl;              using std::find;
+using std::getline;           using std::logic_error;
+using std::map;               using std::string;
+using std::vector;            using std::domain_error;
+using std::rand;
+
+typedef vector<string> Rule;
+typedef vector<Rule> Rule_collection;
+typedef map<string, Rule_collection> Grammar;
+
+// read a grammar from a given input stream
+Grammar read_grammar(istream& in)
+{
+	Grammar ret;
+	string line;
+
+	// read the input
+	while (getline(in, line)) {
+
+		// `split' the input into words
+		vector<string> entry = split(line);
+
+		if (!entry.empty())
+			// use the category to store the associated rule
+			ret[entry[0]].push_back(
+				Rule(entry.begin() + 1, entry.end()));
+	}
+	return ret;
+}
+
+void gen_aux(const Grammar&, const string&, vector<string>&);
+
+
