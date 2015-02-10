@@ -44,7 +44,7 @@ data Exp =
  | ELt Exp Exp
  | EGt Exp Exp
  | ELtEq Exp Exp
- | EGtWq Exp Exp
+ | EGtEq Exp Exp
  | EEq Exp Exp
  | ENEq Exp Exp
  | EAnd Exp Exp

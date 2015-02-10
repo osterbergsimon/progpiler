@@ -157,16 +157,16 @@ Exp11 : Exp11 '+' Exp12 { EPlus $1 $3 }
 
 
 Exp9 :: { Exp }
-Exp9 : Exp9 '<' Exp10 { ELt $1 $3 } 
-  | Exp9 '>' Exp10 { EGt $1 $3 }
-  | Exp9 '<=' Exp10 { ELtEq $1 $3 }
-  | Exp9 '>=' Exp10 { EGtWq $1 $3 }
+Exp9 : Exp10 '<' Exp10 { ELt $1 $3 } 
+  | Exp10 '>' Exp10 { EGt $1 $3 }
+  | Exp10 '<=' Exp10 { ELtEq $1 $3 }
+  | Exp10 '>=' Exp10 { EGtEq $1 $3 }
   | Exp10 { $1 }
 
 
 Exp8 :: { Exp }
-Exp8 : Exp8 '==' Exp9 { EEq $1 $3 } 
-  | Exp8 '!=' Exp9 { ENEq $1 $3 }
+Exp8 : Exp9 '==' Exp9 { EEq $1 $3 } 
+  | Exp9 '!=' Exp9 { ENEq $1 $3 }
   | Exp9 { $1 }
 
 
@@ -181,7 +181,7 @@ Exp3 : Exp3 '||' Exp4 { EOr $1 $3 }
 
 
 Exp2 :: { Exp }
-Exp2 : Exp3 '=' Exp2 { EAss $1 $3 } 
+Exp2 : Exp2 '=' Exp3 { EAss $1 $3 } 
   | Exp3 { $1 }
 
 

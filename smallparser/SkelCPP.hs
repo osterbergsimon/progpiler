@@ -59,7 +59,7 @@ transExp x = case x of
   ELt exp1 exp2  -> failure x
   EGt exp1 exp2  -> failure x
   ELtEq exp1 exp2  -> failure x
-  EGtWq exp1 exp2  -> failure x
+  EGtEq exp1 exp2  -> failure x
   EEq exp1 exp2  -> failure x
   ENEq exp1 exp2  -> failure x
   EAnd exp1 exp2  -> failure x

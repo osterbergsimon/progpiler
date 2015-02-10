@@ -145,16 +145,16 @@ All other symbols are terminals.\\
 \end{tabular}\\
 
 \begin{tabular}{lll}
-{\nonterminal{Exp9}} & {\arrow}  &{\nonterminal{Exp9}} {\terminal{{$<$}}} {\nonterminal{Exp10}}  \\
- & {\delimit}  &{\nonterminal{Exp9}} {\terminal{{$>$}}} {\nonterminal{Exp10}}  \\
- & {\delimit}  &{\nonterminal{Exp9}} {\terminal{{$<$}{$=$}}} {\nonterminal{Exp10}}  \\
- & {\delimit}  &{\nonterminal{Exp9}} {\terminal{{$>$}{$=$}}} {\nonterminal{Exp10}}  \\
+{\nonterminal{Exp9}} & {\arrow}  &{\nonterminal{Exp10}} {\terminal{{$<$}}} {\nonterminal{Exp10}}  \\
+ & {\delimit}  &{\nonterminal{Exp10}} {\terminal{{$>$}}} {\nonterminal{Exp10}}  \\
+ & {\delimit}  &{\nonterminal{Exp10}} {\terminal{{$<$}{$=$}}} {\nonterminal{Exp10}}  \\
+ & {\delimit}  &{\nonterminal{Exp10}} {\terminal{{$>$}{$=$}}} {\nonterminal{Exp10}}  \\
  & {\delimit}  &{\nonterminal{Exp10}}  \\
 \end{tabular}\\
 
 \begin{tabular}{lll}
-{\nonterminal{Exp8}} & {\arrow}  &{\nonterminal{Exp8}} {\terminal{{$=$}{$=$}}} {\nonterminal{Exp9}}  \\
- & {\delimit}  &{\nonterminal{Exp8}} {\terminal{!{$=$}}} {\nonterminal{Exp9}}  \\
+{\nonterminal{Exp8}} & {\arrow}  &{\nonterminal{Exp9}} {\terminal{{$=$}{$=$}}} {\nonterminal{Exp9}}  \\
+ & {\delimit}  &{\nonterminal{Exp9}} {\terminal{!{$=$}}} {\nonterminal{Exp9}}  \\
  & {\delimit}  &{\nonterminal{Exp9}}  \\
 \end{tabular}\\
 
@@ -169,7 +169,7 @@ All other symbols are terminals.\\
 \end{tabular}\\
 
 \begin{tabular}{lll}
-{\nonterminal{Exp2}} & {\arrow}  &{\nonterminal{Exp3}} {\terminal{{$=$}}} {\nonterminal{Exp2}}  \\
+{\nonterminal{Exp2}} & {\arrow}  &{\nonterminal{Exp2}} {\terminal{{$=$}}} {\nonterminal{Exp3}}  \\
  & {\delimit}  &{\nonterminal{Exp3}}  \\
 \end{tabular}\\
 
