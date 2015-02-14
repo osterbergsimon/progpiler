@@ -31,11 +31,29 @@ data FunType = FunType Type [Type]
 typecheck :: Program -> Err ()
 typecheck (PDefs defs) = do
   let env0 = Env
-       { envSig = Map.fromList [(Id "printInt", FunType Type_void [Type_int])]
+       { envSig = Map.fromList [(Id "printInt", FunType Type_void [Type_int]),
+                                (Id "printDouble", FunType Type_void [Type_double]),
+                                (Id "readInt", FunType Type_int []),
+                                (Id "readDpuble", FunType Type_double [])]
        , envCxt = []
        }
   env <- foldM extendSig env0 defs
   mapM_ (checkDef env) defs
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 checkDef :: Env -> Def -> Err ()
 checkDef env (DFun t f args ss) = do
@@ -98,18 +116,48 @@ inferExp env e = case e of
         inferBin [Type_int, Type_double] env e1 e2
   EDiv e1 e2     -> 
         inferBin [Type_int, Type_double] env e1 e2
-  ELt e1 e2     -> 
-        inferBin [Type_int, Type_double] env e1 e2
-  EGt e1 e2     -> 
-        inferBin [Type_int, Type_double] env e1 e2
-  ELtEq e1 e2     -> 
-        inferBin [Type_int, Type_double] env e1 e2
-  EGtEq e1 e2     -> 
-        inferBin [Type_int, Type_double] env e1 e2
-  EEq e1 e2     -> 
-        inferBin [Type_int, Type_double] env e1 e2
-  ENEq e1 e2     -> 
-        inferBin [Type_int, Type_double] env e1 e2
+  ELt e1 e2     -> do
+      t <- inferExp env e1
+      unless (t `elem` [Type_int, Type_double, Type_bool]) $ fail $ 
+        "expected comparable type, but found " ++ printTree t ++
+        " when checking " ++ printTree e1
+      checkExp env e2 t
+      return Type_bool
+  EGt e1 e2 -> do
+      t <- inferExp env e1
+      unless (t `elem` [Type_int, Type_double, Type_bool]) $ fail $ 
+        "expected comparable type, but found " ++ printTree t ++
+        " when checking " ++ printTree e1
+      checkExp env e2 t
+      return Type_bool
+  ELtEq e1 e2 -> do
+      t <- inferExp env e1
+      unless (t `elem` [Type_int, Type_double, Type_bool]) $ fail $ 
+        "expected comparable type, but found " ++ printTree t ++
+        " when checking " ++ printTree e1
+      checkExp env e2 t
+      return Type_bool
+  EGtEq e1 e2 -> do
+      t <- inferExp env e1
+      unless (t `elem` [Type_int, Type_double, Type_bool]) $ fail $ 
+        "expected comparable type, but found " ++ printTree t ++ 
+        " when checking " ++ printTree e1
+      checkExp env e2 t
+      return Type_bool
+  EEq e1 e2 -> do
+      t <- inferExp env e1
+      unless (t `elem` [Type_int, Type_double, Type_bool]) $ fail $ 
+        "expected comparable type, but found " ++ printTree t ++
+        " when checking " ++ printTree e1
+      checkExp env e2 t
+      return Type_bool
+  ENEq e1 e2 -> do
+      t <- inferExp env e1
+      unless (t `elem` [Type_int, Type_double, Type_bool]) $ fail $ 
+        "expected comparable type, but found " ++ printTree t ++
+        " when checking " ++ printTree e1
+      checkExp env e2 t
+      return Type_bool
   EAnd e1 e2     -> 
         inferBin [Type_bool] env e1 e2
   EOr e1 e2     -> 
