@@ -46,13 +46,13 @@ typecheck (PDefs defs) = do
 checkDef :: Env -> Def -> Err ()
 checkDef env (DFun t f args ss) = do
   env' <- foldM (\ env (ADecl t x) -> extendCxt env x t) (newBlock env) args
-  checkStms env' ss
+  checkStms env' t ss
 
-checkStms :: Env -> [Stm] -> Err ()
-checkStms env ss = foldM_ checkStm env ss
+checkStms :: Env -> Type -> [Stm] -> Err ()
+checkStms env t ss = foldM_ (\ env x-> checkStm env t x) env ss
 
-checkStm :: Env -> Stm -> Err Env
-checkStm env s = case s of
+checkStm :: Env -> Type -> Stm -> Err Env
+checkStm env t s = case s of
   SInit t x e -> do
     checkExp env e t
     extendCxt env x t
@@ -60,15 +60,18 @@ checkStm env s = case s of
   SDecls t ids-> do
 			env' <- foldM (\ env x -> extendCxt env x t) env ids
 			return env'
-  SBlock stms     -> do checkStms (newBlock env) stms
-                        return env                     
-  SReturn e       -> env <$ inferExp env e
+  SBlock stms     -> do let env' = newBlock env
+                        checkStms env' t stms
+                        return env                    
+  SReturn e       ->  do t' <- inferExp env e
+                         unless (t == t') $ fail $ "Wrong return type"
+                         return (exitBlock env)
   SWhile e stm    -> do checkExp env e Type_bool 
-                        checkStm env stm
+                        checkStm env t stm
   SIfElse e s1 s2 -> do checkExp env e Type_bool
-                        checkStm env s1
-                        checkStm env s2
-  _ -> fail $ "NYI: checkStm " ++ printTree s
+                        checkStm env t s1
+                        checkStm env t s2
+--  _ -> fail $ "NYI: checkStm " ++ printTree s
 
 
 checkExp :: Env -> Exp -> Type -> Err ()
@@ -82,6 +85,9 @@ checkExp env e t = do
 inferExp :: Env -> Exp -> Err Type
 inferExp env e = case e of
   EInt i    -> return Type_int
+  ETrue         -> return Type_bool
+  EFalse        -> return Type_bool
+  EDouble _      -> return Type_double
   EId x     -> lookupVar env x
   EApp f es -> do
     FunType t ts <- lookupDef env f
@@ -89,9 +95,6 @@ inferExp env e = case e of
       "incorrect number of arguments to function " ++ printTree f
     t <$ zipWithM_ (checkExp env) es ts
   
-  ETrue         -> return Type_bool
-  EFalse        -> return Type_bool
-  EDouble _      -> return Type_double
   EPostIncr e      -> inferUn [Type_double, Type_int] env e
   EPostDecr e      -> inferUn [Type_double, Type_int] env e
   EPreIncr e       -> inferUn [Type_double, Type_int] env e
@@ -189,14 +192,15 @@ lookupVar env x = case catMaybes $ map (Map.lookup x) (envCxt env) of
 
 extendSig :: Env -> Def -> Err Env
 extendSig env@Env{ envSig = sig } (DFun t f args _ss) = do
-  if Map.member f sig then fail $ "duplicate definition of function " ++ printTree f else return env { envSig = Map.insert f ft (envSig env) }
+  if Map.member f sig then fail $ "duplicate definition of function " ++ printTree f 
+    else return env { envSig = Map.insert f ft (envSig env) }
   where ft = FunType t $ map (\ (ADecl t _x) -> t) args
 
 -- | Add new variable with type.
 extendCxt :: Env -> Id -> Type -> Err Env
 extendCxt env@Env{ envCxt = b : bs } x t = do
-	if Map.member x b then fail $ "variable " ++ printTree x ++ " is already declared" 
-	else return env { envCxt = Map.insert x t b : bs }
+  if Map.member x b then fail $ "variable " ++ printTree x ++ " is already declared" 
+  else return env { envCxt = Map.insert x t b : bs }
 
 newBlock :: Env -> Env
 newBlock env = env { envCxt = Map.empty : envCxt env }
