@@ -195,7 +195,7 @@ extendSig env@Env{ envSig = sig } (DFun t f args _ss) = do
 -- | Add new variable with type.
 extendCxt :: Env -> Id -> Type -> Err Env
 extendCxt env@Env{ envCxt = b : bs } x t = do
-	if Map.member x b then fail $ "variable " ++ printTree x ++ " is already declared" 
+	if Map.member x b then fail $ "variable " ++ printTree x ++ " already declared" 
 	else return env { envCxt = Map.insert x t b : bs }
 
 newBlock :: Env -> Env
