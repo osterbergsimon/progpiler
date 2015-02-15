@@ -19,7 +19,7 @@ import System.IO.Unsafe
 import Control.Exception
 
 readFileIfExists :: FilePath -> IO String
-readFileIfExists f = Control.Exception.catch (readFile f) exceptionHandler
+readFileIfExists f = catch (readFile f) exceptionHandler
    where exceptionHandler :: IOException -> IO String
          exceptionHandler _ = return ""
 
