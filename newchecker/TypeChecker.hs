@@ -1,3 +1,7 @@
+-- Simon Österberg (890826-4818) & Denise Glansholm (921019-3141)
+-- NOTE: Fails test core101.cc which is OK according to Andreas Abel in the mailing list
+
+
 module TypeChecker where
 
 import CPP.Abs
@@ -28,13 +32,14 @@ type Block = Map Id Type
 -- | Function type
 data FunType = FunType Type [Type]
 
+--Accepting built in IO functions
 typecheck :: Program -> Err ()
 typecheck (PDefs defs) = do
   let env0 = Env
        { envSig = Map.fromList [(Id "printInt", FunType Type_void [Type_int]),
                                 (Id "printDouble", FunType Type_void [Type_double]),
                                 (Id "readInt", FunType Type_int []),
-                                (Id "readDpuble", FunType Type_double [])]
+                                (Id "readDouble", FunType Type_double [])]
        , envCxt = []
        }
   env <- foldM extendSig env0 defs
@@ -42,15 +47,17 @@ typecheck (PDefs defs) = do
 
 
 
-
+-- Typecheck function definitions
 checkDef :: Env -> Def -> Err ()
 checkDef env (DFun t f args ss) = do
   env' <- foldM (\ env (ADecl t x) -> extendCxt env x t) (newBlock env) args
   checkStms env' t ss
 
+-- Typecheck a list of statements
 checkStms :: Env -> Type -> [Stm] -> Err ()
 checkStms env t ss = foldM_ (\ env x-> checkStm env t x) env ss
 
+-- Typecheck a single statement and update environment
 checkStm :: Env -> Type -> Stm -> Err Env
 checkStm env t s = case s of
   SInit t x e -> do
@@ -71,9 +78,9 @@ checkStm env t s = case s of
   SIfElse e s1 s2 -> do checkExp env e Type_bool
                         checkStm env t s1
                         checkStm env t s2
---  _ -> fail $ "NYI: checkStm " ++ printTree s
 
 
+-- Typecheck a single expression
 checkExp :: Env -> Exp -> Type -> Err ()
 checkExp env e t = do
   t' <- inferExp env e
@@ -82,6 +89,7 @@ checkExp env e t = do
     " but found type " ++ printTree t' ++
     " when checking expression " ++ printTree e
 
+-- Infer type on expression
 inferExp :: Env -> Exp -> Err Type
 inferExp env e = case e of
   EInt i    -> return Type_int
@@ -156,11 +164,8 @@ inferExp env e = case e of
   EAss e1 e2     -> 
         inferBin [Type_int, Type_double, Type_bool] env e1 e2
   
- -- _ -> fail $ "NYI: inferExp " ++ printTree e
-
-
-
-
+ 
+-- Help function that checks that two expressions are equal and of appropriate types
 inferBin :: [Type] -> Env -> Exp -> Exp -> Err Type
 inferBin types env exp1 exp2 = do 
   typ <- inferExp env exp1
@@ -171,6 +176,7 @@ inferBin types env exp1 exp2 = do
     else
       fail $ "wrong type of expression " ++ printTree exp1
 
+-- Help function that checks that an expression is of an appropriate type
 inferUn :: [Type] -> Env -> Exp -> Err Type
 inferUn types env e = do 
   t <- inferExp env e
@@ -179,17 +185,19 @@ inferUn types env e = do
   else 
     fail $ "wrong type of expression " ++ printTree e
 
-
+-- Check if function is in scope
 lookupDef :: Env -> Id -> Err FunType
 lookupDef env f = case Map.lookup f (envSig env) of
   Nothing -> fail $ "undefined function " ++ printTree f
   Just t  -> return t
 
+-- Check if variable is in scope
 lookupVar :: Env -> Id -> Err Type
 lookupVar env x = case catMaybes $ map (Map.lookup x) (envCxt env) of
   []      -> fail $ "unbound variable " ++ printTree x
   (t : _) -> return t
 
+-- Add function signature to scope
 extendSig :: Env -> Def -> Err Env
 extendSig env@Env{ envSig = sig } (DFun t f args _ss) = do
   if Map.member f sig then fail $ "duplicate definition of function " ++ printTree f 
@@ -202,11 +210,14 @@ extendCxt env@Env{ envCxt = b : bs } x t = do
   if Map.member x b then fail $ "variable " ++ printTree x ++ " is already declared" 
   else return env { envCxt = Map.insert x t b : bs }
 
+-- Create a new block in the environment
 newBlock :: Env -> Env
 newBlock env = env { envCxt = Map.empty : envCxt env }
 
+-- Exit the block, forgetting changes
 exitBlock :: Env -> Env
 exitBlock env@Env { envCxt = b : bs } = env { envCxt = bs }
 
+-- Creates a new, empty environment
 emptyEnv :: Env
 emptyEnv = Env { envSig = Map.empty, envCxt = [Map.empty] }
