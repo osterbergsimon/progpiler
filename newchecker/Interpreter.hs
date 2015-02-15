@@ -48,6 +48,33 @@ exec env s = case s of
   SExp e -> do
     (v, env') <- eval env e
     return env'
+  SDecls t ids -> do
+    let env' = foldl (\ env x -> extendCxt env x VUndefined) env ids
+    return $ env'
+  SReturn e -> do
+    (v,env') <- eval env e
+    return $ (exitBlock env')
+ 
+  SWhile e stm -> do
+    (v',env') <- eval env e
+    case v' of
+      VBool True -> do 
+        env'' <- exec env' stm
+        exec env'' (SWhile e stm)
+      VBool False -> return env
+      _ -> error $ printTree e ++ "not a value of type bool" 
+ 
+  SBlock stms -> do foldM exec (newBlock env) stms
+                    return env
+  SIfElse e s1 s2 -> do
+    (v,env') <- eval env e
+    case v of
+      VBool True -> do env'' <- exec env' s1
+                       return env''
+      VBool False -> do env'' <- exec env' s2
+                        return env''
+
+
   _ -> do
     putStrLn $ "NYI: exec " ++ printTree s
     return env
@@ -93,40 +120,40 @@ eval env e = case e of
 
   EPlus e1 e2       -> do (v1,env') <- eval env e1
                           (v2,env'') <- eval env' e2
-                          return ((v1 + v2), env'')
+                          return ((v1 `add` v2), env'')
   EMinus e1 e2      -> do (v1,env') <- eval env e1
                           (v2,env'') <- eval env' e2
-                          return (v1 - v2, env'')
+                          return (v1 `sub` v2, env'')
   ETimes e1 e2      -> do (v1,env') <- eval env e1
                           (v2,env'') <- eval env' e2
-                          return (v1 * v2, env'')
+                          return (v1 `mul` v2, env'')
   EDiv e1 e2        -> do (v1,env') <- eval env e1
                           (v2,env'') <- eval env' e2
-                          return (v1 `div` v2, env'')
+                          return (v1 `divi` v2, env'')
   ELt e1 e2         -> do (v1,env') <- eval env e1
                           (v2,env'') <- eval env' e2
-                          return ((compLt v1 v2), env'')
+                          return ( v1 `lt` v2, env'')
   EGt e1 e2         -> do (v1,env') <- eval env e1
                           (v2,env'') <- eval env' e2
-                          return (v1 > v2, env'')
+                          return (v1 `gt` v2, env'')
   ELtEq e1 e2       -> do (v1,env') <- eval env e1
                           (v2,env'') <- eval env' e2
-                          return (v1 <= v2, env'')
+                          return (v1 `lteq` v2, env'')
   EGtEq e1 e2       -> do (v1,env') <- eval env e1
                           (v2,env'') <- eval env' e2
-                          return (v1 >= v2, env'')
+                          return (v1 `gteq` v2, env'')
   EEq e1 e2         -> do (v1,env') <- eval env e1
                           (v2,env'') <- eval env' e2
-                          return (v1 == v2, env'')
+                          return (v1 `eq` v2, env'')
   ENEq e1 e2        -> do (v1,env') <- eval env e1
                           (v2,env'') <- eval env' e2
-                          return (v1 /= v2, env'')
+                          return (v1 `neq` v2, env'')
   EAnd e1 e2        -> do (v1,env') <- eval env e1
                           (v2,env'') <- eval env' e2
-                          return (v1 && v2, env'')
+                          return (v1 `andV` v2, env'')
   EOr e1 e2         -> do (v1,env') <- eval env e1
                           (v2,env'') <- eval env' e2
-                          return (v1 || v2, env'')
+                          return (v1 `orV` v2, env'')
   EAss e1@(EId x) e2 -> do (v1,env') <- eval env e1
                            (v2,env'') <- eval env' e2
                            let env''' = setVar env'' x v2
@@ -211,14 +238,67 @@ decr v = case v of
   VDouble d -> VDouble $ d - 1
   v -> error $ "cannot increment value " ++ prettyVal v
 
-compLt :: Val -> Val -> Val
-compLt a b = case a of
-  VInt a -> case b of
-    VInt b ->
-      if a < b
-        then return a
-      else return b
-          
+add :: Val -> Val -> Val
+add (VInt v1) (VInt v2) = VInt $ (v1+v2)
+add (VDouble v1) (VDouble v2) = VDouble $ (v1+v2)
+add a b = error $ "mismatch in types between" ++ prettyVal a ++ "and" ++ prettyVal b
 
-boolToV :: Bool -> Val
-boolToV b = return VBool b
+sub :: Val -> Val -> Val
+sub (VInt v1) (VInt v2) = VInt $ (v1-v2)
+sub (VDouble v1) (VDouble v2) = VDouble $ (v1-v2)
+sub a b = error $ "mismatch in types between" ++ prettyVal a ++ "and" ++ prettyVal b
+
+divi :: Val -> Val -> Val
+divi (VInt v1) (VInt v2) = VInt $ (v1 `div` v2)
+divi (VDouble v1) (VDouble v2) = VDouble $ (v1/v2)
+divi a b = error $ "mismatch in types between" ++ prettyVal a ++ "and" ++ prettyVal b
+
+mul :: Val -> Val -> Val
+mul (VInt v1) (VInt v2) = VInt $ (v1*v2)
+mul (VDouble v1) (VDouble v2) = VDouble $ (v1*v2)
+mul a b = error $ "mismatch in types between" ++ prettyVal a ++ "and" ++ prettyVal b
+
+gt :: Val -> Val -> Val
+gt (VInt v1) (VInt v2) = VBool $ (v1>v2)
+gt (VDouble v1) (VDouble v2) = VBool $ (v1>v2)
+gt (VBool v1) (VBool v2) = VBool $ (v1>v2)
+gt a b = error $ "mismatch in types between" ++ prettyVal a ++ "and" ++ prettyVal b
+
+lt :: Val -> Val -> Val
+lt (VInt v1) (VInt v2) = VBool $ (v1<v2)
+lt (VDouble v1) (VDouble v2) = VBool $ (v1<v2)
+lt (VBool v1) (VBool v2) = VBool $ (v1<v2)
+lt a b = error $ "mismatch in types between" ++ prettyVal a ++ "and" ++ prettyVal b
+
+gteq :: Val -> Val -> Val
+gteq (VInt v1) (VInt v2) = VBool $ (v1>=v2)
+gteq (VDouble v1) (VDouble v2) = VBool $ (v1>=v2)
+gteq (VBool v1) (VBool v2) = VBool $ (v1>=v2)
+gteq a b = error $ "mismatch in types between" ++ prettyVal a ++ "and" ++ prettyVal b
+
+lteq :: Val -> Val -> Val
+lteq (VInt v1) (VInt v2) = VBool $ (v1<=v2)
+lteq (VDouble v1) (VDouble v2) = VBool $ (v1<=v2)
+lteq (VBool v1) (VBool v2) = VBool $ (v1<=v2)
+lteq a b = error $ "mismatch in types between" ++ prettyVal a ++ "and" ++ prettyVal b
+
+eq :: Val -> Val -> Val
+eq (VInt v1) (VInt v2) = VBool $ (v1==v2)
+eq (VDouble v1) (VDouble v2) = VBool $ (v1==v2)
+eq (VBool v1) (VBool v2) = VBool $ (v1==v2)
+eq a b = error $ "mismatch in types between" ++ prettyVal a ++ "and" ++ prettyVal b
+
+neq :: Val -> Val -> Val
+neq (VInt v1) (VInt v2) = VBool $ (v1/=v2)
+neq (VDouble v1) (VDouble v2) = VBool $ (v1/=v2)
+neq (VBool v1) (VBool v2) = VBool $ (v1/=v2)
+neq a b = error $ "mismatch in types between" ++ prettyVal a ++ "and" ++ prettyVal b
+
+andV :: Val -> Val -> Val
+andV (VBool v1) (VBool v2) = VBool $ (v1 && v2)
+andV a b = error $ "mismatch in types between" ++ prettyVal a ++ "and" ++ prettyVal b
+
+orV :: Val -> Val -> Val
+orV (VBool v1) (VBool v2) = VBool $ (v1 || v2)
+orV a b = error $ "mismatch in types between" ++ prettyVal a ++ "and" ++ prettyVal b
+
