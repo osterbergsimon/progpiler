@@ -57,48 +57,128 @@ typecheck (PDefs defs) = do
   mapM_ (checkDef env) defs
 
 
--- Typecheck a single statement and update environment
-compileStm :: Stm -> State Env ()
+-- Compile a single statement and update environment
+compileStm :: Stm -> CodeGen ()
 checkStm env t s = case s of
   SInit t x e -> do
-  SExp e -> 
+    extendContext x t
+    a <- lookupVar x
+    compileExp e
+    emit $ JVM.Store a JVM.Word
+  SExp e -> do
+    compileExp e
+    emit $ JVM.Pop JVM.Word
   SDecls t ids-> do
+    
   SBlock stms     -> do                 
   SReturn e       ->  do 
   SWhile e stm    -> do 
   SIfElse e s1 s2 -> do 
 
 
--- Typecheck a single expression
+
+
+-- Compile a single expression
 compileExp :: Exp -> State Exp ()
 compileExp env e = case e of
-  EInt i    -> 
+  EInt i    -> do
+    emit $ JVM.Push $ JVM.Int i
   ETrue         -> 
   EFalse        -> 
   EDouble _      -> 
-  EId x     -> 
+  EId x     -> do
+    a <- lookupVar x
+    emit $ JVM.Load a JVM.Word
   EApp f es -> do
     FunType t ts <- 
-  EPostIncr e      -> 
-  EPostDecr e      -> 
-  EPreIncr e       -> 
-  EPreDecr e       -> 
-  EPlus e1 e2     -> 
-  EMinus e1 e2     -> 
-  ETimes e1 e2     -> do
+  EPostIncr e@(EId x)     -> do
+    a <- lookupVar x
+    compileExp e
+    emit $ JVM.Dup JVM.Word
+    emit $ JVM.Push $ JVM.VInt 1
+    emit $ JVM.Add JVM.Word
+    emit $ JVM.Store a JVM.Word
+  EPostDecr e@(EId x)     -> do
+    a <- lookupVar x
+    compileExp e
+    emit $ JVM.Dup JVM.Word
+    emit $ JVM.Push $ JVM.VInt 1
+    emit $ JVM.Sub JVM.Word
+    emit $ JVM.Store a JVM.Word
+  EPreIncr e@(EId x)       -> do
+    a <- lookupVar x
+    compileExp e
+    emit $ JVM.Push $ JVM.VInt 1
+    emit $ JVM.Add JVM.Word
+    emit $ JVM.Dup JVM.Word
+    emit $ JVM.Store a JVM.Word
+  EPreDecr e@(EId x)      -> do
+    a <- lookupVar x
+    compileExp e
+    emit $ JVM.Push $ JVM.VInt 1
+    emit $ JVM.Sub JVM.Word
+    emit $ JVM.Dup JVM.Word
+    emit $ JVM.Store a JVM.Word 
+  EPlus e1 e2     -> do
     compileExp e1
     compileExp e2
-    imul_Instr
-  EDiv e1 e2     -> 
+    emit $ JVM.Add JVM.Word
+  EMinus e1 e2     ->  do
+    compileExp e1
+    compileExp e2
+    emit $ JVM.Sub JVM.Word
+  ETimes e1 e2     ->  do
+    compileExp e1
+    compileExp e2
+    emit $ JVM.Mul JVM.Word
+  EDiv e1 e2     ->  do
+    compileExp e1
+    compileExp e2
+    emit $ JVM.Div JVM.Word
   ELt e1 e2     -> do
+    compileExp e1
+    compileExp e2
+    emit $ JVM.Sub JVM.Word
+    emit $ JVM.LTH JVM.Word
   EGt e1 e2 -> do
+    compileExp e1
+    compileExp e2
+    emit $ JVM.Sub JVM.Word
+    emit $ JVM.GTH JVM.Word
   ELtEq e1 e2 -> do
+    compileExp e1
+    compileExp e2
+    emit $ JVM.Sub JVM.Word
+    emit $ JVM.LE JVM.Word
   EGtEq e1 e2 -> do
+    compileExp e1
+    compileExp e2
+    emit $ JVM.Sub JVM.Word
+    emit $ JVM.GE JVM.Word
   EEq e1 e2 -> do
+    compileExp e1
+    compileExp e2
+    emit $ JVM.Sub JVM.Word
+    emit $ JVM.EQU JVM.Word
   ENEq e1 e2 -> do
-  EAnd e1 e2     -> 
-  EOr e1 e2     -> 
-  EAss e1 e2     -> 
+    compileExp e1
+    compileExp e2 
+    emit $ JVM.Sub JVM.Word
+    emit $ JVM.NE JVM.Word
+  EAnd e1 e2     -> do
+    compileExp e1
+    compileExp e2
+    emit $ JVM.And JVM.Word 
+  EOr e1 e2     ->  do
+    compileExp e1
+    compileExp e2
+    emit $ JVM.Or JVM.Word  
+  EAss e@(EId x) e2     ->  do
+    compileExp e
+    compileExp e2
+    a <- lookupVar x
+    emit $ JVM.Store a JVM.Word    
+
  
  
 
