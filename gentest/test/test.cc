@@ -1,25 +1,29 @@
 
 int main () {
-        int n, i;
-        n = readInt();
-        i = 2;
-        while (i <= n) {
-                bool iPrime = true;
-                int j = 2;
-                while (j*j <= i && iPrime) {
-                        if ((i / j) * j == i) {
-                                iPrime = false;
-                        } else {}
-                        j++;
-                }
-
-                if (iPrime && (n / i) * i == n) {
-                        printInt(i);
-                        n = n / i;
-                } else {
-                        i++;
-                }
-        }
-
-        return 0;
+    int i = 1;
+    printInt(i);
+    true || i++ != 45;
+    printInt(i);
+    false || i++ >= 0;
+    printInt(i);
+    true && i++ < 0;
+    printInt(i);
+    false && i++ > 0;
+    printInt(i);
+    int j = 0;
+      // Initialization of j would not be needed as the access of j
+      // is in dead code, if compiled correctly.
+      // However, the JVM bytecode verifier is picky and will complain.
+    if (34 < 6 && j < 0) {
+        printInt(i);
+    } else {
+        printInt (42);
+    }
 }
+
+/*
+1
+2
+3
+3
+42*/

@@ -1,4 +1,4 @@
-.class public test
+.class public good15
 .super java/lang/Object
 
 .method public <init>()V
@@ -9,7 +9,7 @@
 
 .method public static main([Ljava/lang/String;)V
 .limit locals 1
-  invokestatic test/main()I
+  invokestatic good15/main()I
   pop
   return
 .end method

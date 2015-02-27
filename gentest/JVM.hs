@@ -25,7 +25,6 @@ data CondOp =
 data Size = Word | DWord
   deriving (Eq)
 
--- TODO: add more instructions
 data Instruction
   = Load Address Size
   | Store Address Size
@@ -55,49 +54,58 @@ instance Show Instruction where
 
 showInstruction :: Instruction -> String
 showInstruction (Load addr s)
-  | addr >= 0 && addr <= 3 = "iload_" ++ show addr
-  | otherwise = "iload " ++ show addr
+  | addr >= 0 && addr <= 3  = "iload_" ++ show addr
+  | otherwise               = "iload " ++ show addr
+
 showInstruction (Store addr s) 
-  | addr >= 0 && addr <= 3 = "istore_" ++ show addr
-  | otherwise = "istore " ++ show addr
+  | addr >= 0 && addr <= 31 = "istore_" ++ show addr
+  | otherwise               = "istore " ++ show addr
+
 showInstruction (Push (VInt i))
-  | i == (-1) = "iconst_m1"
-  | i >= 0 && i <= 5 = "iconst_" ++ show i
-  | abs i < 2^7 = "bipush " ++ show i
-  | abs i < 2^15 = "sipush " ++ show i
-  | abs i < 2^31 = "ldc " ++ show i
-  | otherwise = "Too big integer: " ++ show i
-showInstruction (Pop Word) = "pop"
-showInstruction (Dup Word) = "dup"
-showInstruction (Add Word) = "iadd"
-showInstruction (Div Word) = "idiv"
-showInstruction (Rem Word) = "irem"
-showInstruction (Mul Word) = "imul"
-showInstruction (Sub Word) = "isub"
-showInstruction (Neg Word) = "ineg"
-showInstruction (And Word) = "iand"
-showInstruction (Or Word) = "ior"
-showInstruction (Goto lbl) = "goto " ++ showLabel lbl
---showInstruction (If l)  = "ifeq " ++ showLabel l
+  | i == (-1)               = "iconst_m1"
+  | i >= 0 && i <= 5        = "iconst_" ++ show i
+  | abs i < 2^7             = "bipush " ++ show i
+  | abs i < 2^15            = "sipush " ++ show i
+  | abs i < 2^31            = "ldc " ++ show i
+  | otherwise               = "Too big integer: " ++ show i
+
+showInstruction (Pop Word)  = "pop"
+showInstruction (Dup Word)  = "dup"
+showInstruction (Add Word)  = "iadd"
+showInstruction (Div Word)  = "idiv"
+showInstruction (Rem Word)  = "irem"
+showInstruction (Mul Word)  = "imul"
+showInstruction (Sub Word)  = "isub"
+showInstruction (Neg Word)  = "ineg"
+showInstruction (And Word)  = "iand"
+showInstruction (Or Word)   = "ior"
+
+showInstruction (Goto lbl)  = "goto " ++ showLabel lbl
+
 showInstruction (If op lbl Word) = cmd ++ " " ++ showLabel lbl
   where cmd = case op of
-          LTH -> "if_icmplt"
-          LE -> "if_icmple"
-          GTH -> "if_icmpgt"
-          GE -> "if_icmpge"
-          EQU -> "if_icmpeq" 
-          NE -> "if_icmpne"
-          IFEQ -> "ifeq"
+          LTH   -> "if_icmplt"
+          LE    -> "if_icmple"
+          GTH   -> "if_icmpgt"
+          GE    -> "if_icmpge"
+          EQU   -> "if_icmpeq" 
+          NE    -> "if_icmpne"
+          IFEQ  -> "ifeq"
+
 showInstruction (Return s) = case s of
   Just Word -> "ireturn"
-  Nothing -> "return"
+  Nothing   -> "return"
+
 showInstruction (Label l) = showLabel l ++":\n"
+
 showInstruction (Comment c) = "; " ++ c
+
 showInstruction (Raw r) = r
+
 showInstruction (Invoke c n a r) = 
   "invokestatic " ++ c ++ "/" ++ n ++ "(" ++ concat a ++ ")" ++ r
-showInstruction (Null) = "aconst_null"
 
+showInstruction (Null) = "aconst_null"
 
 showLabel :: Label -> String
 showLabel lbl = "L" ++ show lbl

@@ -32,6 +32,7 @@ data VarContext = VarContext
   , next :: JVM.Address
   }
 
+-- | Functions signatures
 type Signatures = Map Id JVM.FunType
 
 
@@ -53,7 +54,15 @@ blank :: CodeGen ()
 blank = raw ""
 
 newBlock :: CodeGen ()
-newBlock = modify $ updateContexts $ (emptyContext :)
+newBlock = do
+  env@Env { contexts = c } <- get
+  case c of
+    [] -> modify $ updateContexts $ (emptyContext :)
+    c -> do 
+         let vc1@VarContext{ vars = v, next = n} = head c
+         let vc2 = VarContext{ vars = Map.empty, next = n } 
+         modify $ updateContexts $ (vc2 :)
+
 
 exitBlock :: CodeGen ()
 exitBlock = modify $ updateContexts $ tail
@@ -61,14 +70,14 @@ exitBlock = modify $ updateContexts $ tail
 extendContext :: Id -> Type -> CodeGen ()
 extendContext x _t = modify $ updateContexts $ \ (b : bs) ->
   b { vars = Map.insert x (next b) (vars b)
-    , next = next b + 1  -- TODO double
+    , next = next b + 1 
     } : bs
 
 extendSig :: Def -> CodeGen ()
-extendSig (DFun t f@(Id name) args ss) = do
-  let argTypes = map (\ (ADecl t x) -> typeAlias t) args
+extendSig (DFun t f@(Id name) args stms) = do
+  let types = map (\ (ADecl t x) -> typeAlias t) args
   let t' = typeAlias t
-  let sig = (JVM.FunType t' argTypes)
+  let sig = (JVM.FunType t' types)
   modify $ updateSignatures $ \ s -> Map.insert f sig s
 
 lookupVar :: Id -> CodeGen JVM.Address
@@ -79,10 +88,10 @@ lookupVar x = do
     (a : _) -> return a
 
 lookupFun :: Id -> CodeGen (String, [String])
-lookupFun f = do
-  s <- gets signatures
-  case Map.lookup f s of 
-    Nothing -> error $ "undefined function " ++ printTree f
+lookupFun fid = do
+  sigs <- gets signatures
+  case Map.lookup fid sigs of 
+    Nothing -> error $ "undefined function " ++ printTree fid
     Just (JVM.FunType t at) -> return (t, at)
 
 -- * Environment
@@ -161,6 +170,7 @@ compileDef (DFun t f@(Id name) args ss) = do
   newBlock
 
   mapM_ (\ (ADecl t x) -> extendContext x t) args
+
   mapM_ compileStm ss
 
   exitBlock
@@ -173,7 +183,6 @@ compileDef (DFun t f@(Id name) args ss) = do
     _         -> do
       emit $ JVM.Push   $ JVM.VInt 0
       emit $ JVM.Return $ Just JVM.Word
-      -- TODO double
 
   raw $ ".end method"
 
@@ -187,7 +196,7 @@ compileDecl t id = do
 compileStm :: Stm -> CodeGen ()
 compileStm s = do
   blank
-  comment $ removeNL $ printTree s
+  comment $ rmvNL $ printTree s
   case s of
     SInit t x e -> do
       extendContext x t
@@ -205,15 +214,12 @@ compileStm s = do
 
     SDecls t ids -> do
       mapM_ (\ x -> extendContext x t) ids
- --     mapM_ (\ x -> compileDecl t x) ids
-
 
     SWhile e s -> do
       test <- makeLabel 
       end <- makeLabel
       emit $ JVM.Label test
       compileExp e
-      --emit $ JVM.Push $ JVM.VInt 0
       emit $ JVM.If JVM.IFEQ end JVM.Word
       compileStm s
       emit $ JVM.Goto test
@@ -226,18 +232,14 @@ compileStm s = do
 
     SIfElse e e1 e2 -> do
       compileExp e
-      --emit $ JVM.Push $ JVM.VInt 0
       true <- makeLabel
       false <- makeLabel
-      --emit $ JVM.If JVM.EQU false JVM.Word
       emit $ JVM.If JVM.IFEQ false JVM.Word
       compileStm e1
       emit $ JVM.Goto true
       emit $ JVM.Label false
       compileStm e2
       emit $ JVM.Label true
-
-   -- _ -> comment "TODO"
 
 compileExp :: Exp -> CodeGen ()
 compileExp e = case e of
@@ -257,16 +259,15 @@ compileExp e = case e of
   EApp (Id "readInt") args -> do
     mapM_ compileExp args
     emit $ JVM.Invoke "Runtime" "readInt" [""] "I"
-    --emit $ JVM.Push $ JVM.VInt 0
 
   EApp (Id f) args -> do
     mapM_ compileExp args
     cls <- gets className
     (t, at) <- lookupFun (Id f) 
     emit $ JVM.Invoke cls f at t
-    --emit $ JVM.Push $ JVM.VInt 0
  
   ETrue         -> emit $ JVM.Push $ JVM.VInt 1
+
   EFalse        -> emit $ JVM.Push $ JVM.VInt 0
   
   EPostIncr e@(EId x)     -> do
@@ -276,6 +277,7 @@ compileExp e = case e of
     emit $ JVM.Push $ JVM.VInt 1
     emit $ JVM.Add JVM.Word
     emit $ JVM.Store a JVM.Word
+
   EPostDecr e@(EId x)     -> do
     a <- lookupVar x
     compileExp e
@@ -283,6 +285,7 @@ compileExp e = case e of
     emit $ JVM.Push $ JVM.VInt 1
     emit $ JVM.Sub JVM.Word
     emit $ JVM.Store a JVM.Word
+
   EPreIncr e@(EId x)       -> do
     a <- lookupVar x
     compileExp e
@@ -290,6 +293,7 @@ compileExp e = case e of
     emit $ JVM.Add JVM.Word
     emit $ JVM.Dup JVM.Word
     emit $ JVM.Store a JVM.Word
+
   EPreDecr e@(EId x)      -> do
     a <- lookupVar x
     compileExp e
@@ -297,22 +301,27 @@ compileExp e = case e of
     emit $ JVM.Sub JVM.Word
     emit $ JVM.Dup JVM.Word
     emit $ JVM.Store a JVM.Word 
+
   EPlus e1 e2     -> do
     compileExp e1
     compileExp e2
     emit $ JVM.Add JVM.Word
+
   EMinus e1 e2     ->  do
     compileExp e1
     compileExp e2
     emit $ JVM.Sub JVM.Word
+
   ETimes e1 e2     ->  do
     compileExp e1
     compileExp e2
     emit $ JVM.Mul JVM.Word
+
   EDiv e1 e2     ->  do
     compileExp e1
     compileExp e2
     emit $ JVM.Div JVM.Word
+
   ELt e1 e2 -> do
     emit $ JVM.Push (JVM.VInt 1)
     compileExp e1
@@ -322,6 +331,7 @@ compileExp e = case e of
     emit $ JVM.Pop JVM.Word
     emit $ JVM.Push (JVM.VInt 0)
     emit $ JVM.Label true
+
   EGt e1 e2 -> do
     emit $ JVM.Push (JVM.VInt 1)
     compileExp e1
@@ -331,6 +341,7 @@ compileExp e = case e of
     emit $ JVM.Pop JVM.Word
     emit $ JVM.Push (JVM.VInt 0)
     emit $ JVM.Label true
+
   ELtEq e1 e2 -> do
     emit $ JVM.Push (JVM.VInt 1)
     compileExp e1
@@ -340,6 +351,7 @@ compileExp e = case e of
     emit $ JVM.Pop JVM.Word
     emit $ JVM.Push (JVM.VInt 0)
     emit $ JVM.Label true
+
   EGtEq e1 e2 -> do
     emit $ JVM.Push (JVM.VInt 1)
     compileExp e1
@@ -349,6 +361,7 @@ compileExp e = case e of
     emit $ JVM.Pop JVM.Word
     emit $ JVM.Push (JVM.VInt 0)
     emit $ JVM.Label true
+
   EEq e1 e2 -> do
     emit $ JVM.Push (JVM.VInt 1)
     compileExp e1
@@ -358,6 +371,7 @@ compileExp e = case e of
     emit $ JVM.Pop JVM.Word
     emit $ JVM.Push (JVM.VInt 0)
     emit $ JVM.Label true
+
   ENEq e1 e2 -> do
     emit $ JVM.Push (JVM.VInt 1)
     compileExp e1
@@ -367,22 +381,31 @@ compileExp e = case e of
     emit $ JVM.Pop JVM.Word
     emit $ JVM.Push (JVM.VInt 0)
     emit $ JVM.Label true
+
   EAnd e1 e2     -> do
+    lazyfalse <- makeLabel
     compileExp e1
+    emit $ JVM.Dup JVM.Word
+    emit $ JVM.If JVM.IFEQ lazyfalse JVM.Word
     compileExp e2
-    emit $ JVM.And JVM.Word 
+    emit $ JVM.And JVM.Word
+    emit $ JVM.Label lazyfalse
+
   EOr e1 e2     ->  do
+    lazytrue <- makeLabel
     compileExp e1
+    emit $ JVM.Dup JVM.Word
+    emit $ JVM.Push (JVM.VInt 0)
+    emit $ JVM.If JVM.NE lazytrue JVM.Word
     compileExp e2
-    emit $ JVM.Or JVM.Word  
+    emit $ JVM.Or JVM.Word
+    emit $ JVM.Label lazytrue  
+
   EAss e@(EId x) e2     ->  do
-    --compileExp e
     compileExp e2
     emit $ JVM.Dup JVM.Word
     a <- lookupVar x
-    emit $ JVM.Store a JVM.Word    
-
-  _ -> comment "TODO"
+    emit $ JVM.Store a JVM.Word
 
 -- | Get the Jasmin type alias for a type
 typeAlias :: Type -> String
@@ -392,13 +415,13 @@ typeAlias t = case t of
   Type_bool   -> "I"
   Type_void   -> "V"
 
-removeNL :: String -> String
-removeNL ['\n'] = ['\n']
-removeNL ('\n':cs) = '\n': ';': ' ' : removeNL cs
-removeNL (c:cs) = c : removeNL cs  
+rmvNL :: String -> String
+rmvNL ['\n'] = ['\n']
+rmvNL ('\n':cs) = '\n': ';': ' ' : rmvNL cs
+rmvNL (c:cs) = c : rmvNL cs  
 
 makeLabel :: CodeGen Int
 makeLabel = do
-  lbs <- gets labels
+  lbls <- gets labels
   modify $ updateLabels $ \ l -> l + 1
-  return lbs
+  return lbls
