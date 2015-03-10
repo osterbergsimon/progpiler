@@ -18,7 +18,7 @@ import Fun.Print
 
 interpret :: Strategy -> Program -> Err Integer
 interpret strategy (Prog defs) = do
-  let cxt = Cxt (makeGlobal defs) emptyEnv
+  let cxt = Cxt (makeGlobal defs) emptyEnv strategy
   v <- eval (EVar $ Ident "main") `runReaderT` cxt
   case v of
     VInt i -> return i
@@ -35,6 +35,7 @@ data Strategy
 data Cxt = Cxt
   { cxtGlobal :: Sig
   , cxtLocal  :: Env
+  , ctxStrat  :: Strategy
   }
 
 data Value
@@ -56,7 +57,11 @@ type Eval = ReaderT Cxt Err
 eval :: Exp -> Eval Value
 eval e = case e of
   EInt i   -> return $ VInt i
-  EVar x   -> lookupCxt x
+  EVar x   -> do
+      v <- lookupCxt x
+      case v of
+        (VClos e env) -> local (\ cxt -> cxt { cxtLocal = env }) $ eval e
+        _             -> return v
   EAbs x b -> do
     cxt <- ask
     return $ VClos e $ cxtLocal cxt
@@ -66,9 +71,20 @@ eval e = case e of
     -- OR:
     -- VClos e <$> asks cxtLocal
   EApp f e -> do
-    g <- eval f
-    v <- eval e
-    apply g v
+      cxt@(Cxt glob loc stra) <- ask
+      g <- eval f
+      case stra of
+        CallByValue -> do
+          v <- eval e      
+          apply g v
+        CallByName  -> do
+          case e of
+            (EInt i) -> do
+              let v = (VInt i)
+              apply g v
+            _        -> do
+              let v = (VClos e loc)
+              apply g v
   EAdd e1 e2 -> do
     v1 <- eval e1
     v2 <- eval e2
@@ -84,8 +100,7 @@ eval e = case e of
   EIf e s1 s2 -> do
     e' <- eval e
     case e' of
-        VInt 1 -> do
-            eval s1
+        VInt 1 -> eval s1
         VInt 0 -> eval s2
         _ -> fail $ "Non-bool condition in if-clause"
 
@@ -103,7 +118,7 @@ apply f v = case f of
 
 lookupCxt :: Ident -> Eval Value
 lookupCxt x = do
-  cxt@(Cxt glob loc) <- ask
+  cxt@(Cxt glob loc stra) <- ask
   case Map.lookup x loc of
     Just v -> return v
     Nothing -> case Map.lookup x glob of
